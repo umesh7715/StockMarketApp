@@ -2,11 +2,15 @@ package com.plcoding.stockmarketapp.data.repository
 
 import com.plcoding.stockmarketapp.data.csv.CSVParser
 import com.plcoding.stockmarketapp.data.csv.CompanyListingParser
+import com.plcoding.stockmarketapp.data.local.StockDao
 import com.plcoding.stockmarketapp.data.local.StockDatabase
+import com.plcoding.stockmarketapp.data.mapper.toCompanyInfo
 import com.plcoding.stockmarketapp.data.mapper.toCompanyList
 import com.plcoding.stockmarketapp.data.mapper.toCompanyListEntity
 import com.plcoding.stockmarketapp.data.remote.StockApi
+import com.plcoding.stockmarketapp.domain.model.CompanyInfo
 import com.plcoding.stockmarketapp.domain.model.CompanyListing
+import com.plcoding.stockmarketapp.domain.model.IntradayInfo
 import com.plcoding.stockmarketapp.domain.repository.CompanyListingRepository
 import com.plcoding.stockmarketapp.util.Resource
 import kotlinx.coroutines.flow.Flow
@@ -18,9 +22,10 @@ import javax.inject.Singleton
 
 @Singleton
 class CompanyListingRepositoryImpl @Inject constructor(
-    val api: StockApi,
-    val db: StockDatabase,
-    val companyListingParser: CSVParser<CompanyListing>
+    private val api: StockApi,
+    private val db: StockDatabase,
+    private val companyListingParser: CSVParser<CompanyListing>,
+    private val intradayInfoParser: CSVParser<IntradayInfo>
 ) : CompanyListingRepository {
 
     val dao = db.stockDao
@@ -72,6 +77,33 @@ class CompanyListingRepositoryImpl @Inject constructor(
                 )
                 emit(Resource.Loading(false))
             }
+        }
+    }
+
+    override suspend fun getIntradayInfo(symbol: String): Resource<List<IntradayInfo>> {
+        return try {
+            val response = api.getIntradayInfo(symbol)
+            val list = intradayInfoParser.parse(response.byteStream())
+            Resource.Success(list)
+        } catch (exception: IOException) {
+            exception.printStackTrace()
+            Resource.Error("Something went wrong")
+        } catch (exception: HttpException) {
+            exception.printStackTrace()
+            Resource.Error("Please check your internet connection")
+        }
+    }
+
+    override suspend fun getCompanyInfo(symbol: String): Resource<CompanyInfo> {
+        return try {
+            val response = api.getCompanyInfo(symbol).toCompanyInfo()
+            Resource.Success(response)
+        } catch (exception: IOException) {
+            exception.printStackTrace()
+            Resource.Error("Something went wrong")
+        } catch (exception: HttpException) {
+            exception.printStackTrace()
+            Resource.Error("Please check your internet connection")
         }
     }
 }

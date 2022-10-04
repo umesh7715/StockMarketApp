@@ -20,8 +20,8 @@ class CompanyListingParser @Inject constructor() : CSVParser<CompanyListing> {
                 .readAll()
                 .drop(1)
                 .mapNotNull { lineArray ->
-                    val name = lineArray[0]
-                    val symbol = lineArray[1]
+                    val name = lineArray[1]
+                    val symbol = lineArray[0]
                     val exchange = lineArray[2]
 
                     CompanyListing(
